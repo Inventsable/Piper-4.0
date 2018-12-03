@@ -25,8 +25,8 @@ Return
 
 
 ^#F13::
-    runScript("MiniSpy", myDoc . "\Piper 4.0\MiniSpy")
-    ; runScript("WindowSpy", "C:\Program Files\AutoHotkey")
+    ; runScript("MiniSpy", myDoc . "\Piper 4.0\MiniSpy")
+    runScript("WindowSpy", "C:\Program Files\AutoHotkey")
 Return
 
 ~*LButton::

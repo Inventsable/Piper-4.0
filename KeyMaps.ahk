@@ -40,8 +40,8 @@ IllustratorKeys := 				{"F13" : "{Enter}"
 								,"+MButton" : "+m"
 								,"!F13" : "{F12}"
 								,"!F14" : "!{F12}"
-								,"!F15" : "{F3}"
-								,"!F16" : "{F5}"
+								,"!F15" : "^+{F11}"
+								,"!F16" : "^+{F10}"
 								,"!XButton2" : "^+]"
 								,"!XButton1" : "^+["
 								,"!MButton" : "^+g"
@@ -206,9 +206,12 @@ winSnap(direction) {
 
 
 
-#If WinActive("(?i).*\.(js||ts)")
+#If WinActive("(?i).*\.(js||ts||vue||html)")
 :B0:forloop::
     lastClip := Clipboard
+	ClipWait, 1, 1
+	KeyWait, Space
+	KeyWait, Space, D
 	KeyWait, Space
 	KeyWait, Space, D
 	KeyWait, Space
@@ -218,11 +221,22 @@ winSnap(direction) {
 	Sleep, 50
 	ClipWait, 1, 1
 	result := StrSplit(Clipboard, A_Space)
-	length := result[2]
-	Send % "for (var i = 0; i < " . length . "; i"
+	length := result[3]
+	root := result[2]
+	Send % "for (var " . root . " = 0; " . root . " < " . length . "; " . root
 	Send, +=+={)}{Space}{{}{Enter}
-    Clipboard := lastClip
+	target := StrReplace(length, ".length", "[" . root . "];")
+	Send % "= " . target
+	Send, {Home}
+	Send % "var "
+	Send, {Space}{Left}
+	KeyWait, Space
+	KeyWait, Space, D
+	Send, {bs}{End}{Enter}
+	Clipboard := lastClip
+	ClipWait, 1, 1
 Return
+
 
 #If WinActive("(?i).*\.vue")
 :B0:vuetag::

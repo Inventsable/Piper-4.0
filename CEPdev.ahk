@@ -68,7 +68,7 @@ convertSlashes(path) {
 
 tempNum() {
 	filecount = 0
-	dest := A_AppData . "\Adobe\CEP\extensions\certs\*.p12"
+	dest := A_AppData . "\Adobe\CEP\extensions\_certs\*.p12"
 	Loop, Files, %dest%
 		filecount++
 	Return filecount
@@ -94,18 +94,16 @@ autoSign() {
 		Return
 	}
 	filecount := tempNum()
-	stages := { output:["./ZXPSignCmd{space}-selfSignedCert{space}US{space}AZ{space}Inventsable{space}SomeCommonName{space}" . password . "{space}certs/temp" . filecount . ".p12{Enter}"
-						,"./ZXPSignCmd{space}-sign{space}" . CurrExt . "{space}builds/" . CurrExt . ".zip{space}certs/temp" . filecount . ".p12{space}" . password . "{space}-tsa{space}http://time.certum.pl{Enter}"
-						,"./ZXPSignCmd{space}-sign{space}" . CurrExt . "{space}builds/" . CurrExt . ".zxp{space}certs/temp" . filecount . ".p12{space}" . password . "{space}-tsa{space}http://time.certum.pl{Enter}"
-						,"./ZXPSignCmd{space}-verify{space}builds/" . CurrExt . ".zxp{space}-certinfo{Enter}"]
+	stages := { output:["./ZXPSignCmd{space}-selfSignedCert{space}US{space}AZ{space}Inventsable{space}SomeCommonName{space}" . password . "{space}_certs/temp" . filecount . ".p12{Enter}"
+						,"./ZXPSignCmd{space}-sign{space}" . CurrExt . "{space}_builds/" . CurrExt . ".zip{space}_certs/temp" . filecount . ".p12{space}" . password . "{space}-tsa{space}http://time.certum.pl{Enter}"
+						,"./ZXPSignCmd{space}-sign{space}" . CurrExt . "{space}_builds/" . CurrExt . ".zxp{space}_certs/temp" . filecount . ".p12{space}" . password . "{space}-tsa{space}http://time.certum.pl{Enter}"
+						,"./ZXPSignCmd{space}-verify{space}_builds/" . CurrExt . ".zxp{space}-certinfo{Enter}"]
 				,rootDir:A_AppData . "\Adobe\CEP\extensions\"
 				,file:["temp" . filecount . ".p12", CurrExt . ".zip", CurrExt . "zxp", CurrExt . "zxp"]
-				,parentDir:["certs\","builds\", "builds\", "builds\"] }
+				,parentDir:["certs\","_builds\", "_builds\", "_builds\"] }
 
 	WinActivate, ahk_exe mintty.exe
 	SendInput % "cd " . convertSlashes(stages.rootDir) . "{Enter}"
-	; Sleep, 50
-	; SendInput % "./ZXPSignCmd{Enter}"
 
 	Loop % stages.output.length() {
 		if (!only) {
@@ -131,23 +129,147 @@ autoSign() {
 	Return
 }
 
-NewVueInline:
-	CurrDirectory := A_AppData . "\Roaming\Adobe\CEP\extensions"
-	RepoVar := ""
+F19::
+	goSub NewVueInline
+Return 
 
+F20::
+NewCEPBuild:
+	InputBox, fullPath, Full path to extension:,,,, 100
+	if ErrorLevel {
+		MsgBox, 16, Aborting, Aborting CEP build  
+		Return
+	}
+	thisRepo := RegExReplace(fullPath, "(\w|\\|\:)*\\", "")
+	thisRoot := SubStr(fullPath, 1, StrLen(fullPath) - StrLen(thisRepo))
+	clone := thisRoot . thisRepo . "temp"
+	cloneAlreadyExists := InStr(FileExist(clone . "\_builds"), "D")
+	if (cloneAlreadyExists) {
+		FileRemoveDir, % clone, 1
+		If ErrorLevel {
+			MsgBox % 16,, Remove clone failed
+		}
+	}
+	FileCopyDir, % fullPath, % clone
+
+	buildcount = 0
+	hasOmitPath := [clone . "\_builds", clone . "\.git", clone . "\sandbox", clone . "\node_modules"]
+	Loop % hasOmitPath.length() {
+		thisPath := hasOmitPath[A_Index]
+		thisState := InStr(FileExist(thisPath), "D")
+		if (thisState) {
+			if (InStr(thisPath, "builds")) {
+				Loop, Files, % thisPath . "\*.zxp"
+					buildcount++
+			}
+			FileRemoveDir, % thisPath, 1
+			If ErrorLevel {
+				MsgBox % 16,, % "Remove " . A_Index . " failed"
+			}
+		}
+	}
+	builder := (buildcount < 10) ? "1.0" . buildcount++ : "1." . buildcount++
+	writeBuildNumber(clone, builder)
+	newBuild := autoSignUltra(thisRepo, builder)
+	buildPath := A_AppData . "\Adobe\CEP\extensions\_builds\" . newBuild
+	buildTarget := fullPath . "\_builds\" . newBuild
+
+	MsgBox, 4,, Append this permanent version?
+	IfMsgBox, Yes 
+	{
+		FileCopy, % buildPath, % buildTarget
+		If ErrorLevel {
+			MsgBox % 16,, % "Final copy failed"
+		}
+		MsgBox % newBuild . " is a ready as a production build"
+	} else {
+		MsgBox % newBuild . " is a ready as a temporary build"
+	}
+	FileRemoveDir, % clone, 1
+Return 
+
+writeBuildNumber(root, thisBuild) {
+	FileRead, xml, % root . "\CSXS\manifest.xml"
+	If ErrorLevel {
+		MsgBox % 16,, % "read failed"
+	}
+	xml_replaced := RegExReplace(xml, "ExtensionBundleVersion\=\""1\.0\.0\""", thisBuild)	
+	xml_replaced := RegExReplace(xml_replaced, "Version\=\""1\.0\.0\""", thisBuild)	
+	FileAppend, % xml_replaced, % root . "\CSXS\manifest.xml"
+	If ErrorLevel {
+		MsgBox % 16,, % "append failed"
+	}
+	Return
+}
+
+autoSignUltra(original, buildnum) {
+	CurrExt := original . "temp"
+	only := false
+	InputBox, password, Password for %original%,,,, 100
+	if ErrorLevel {
+		MsgBox, 16, You've cancelled autoSign.
+		Return
+	}
+	certCount := tempNum()
+	stages := 	{ output:["./ZXPSignCmd{space}-selfSignedCert{space}US{space}AZ{space}inventsable{space}ThomasScharstein{space}" . password . "{space}_certs/temp" . certCount . ".p12{Enter}"
+						,"./ZXPSignCmd{space}-sign{space}" . CurrExt . "{space}_builds/" . original . buildnum . ".zip{space}_certs/temp" . certCount . ".p12{space}" . password . "{space}-tsa{space}http://time.certum.pl{Enter}"
+						,"./ZXPSignCmd{space}-sign{space}" . CurrExt . "{space}_builds/" . original . buildnum . ".zxp{space}_certs/temp" . certCount . ".p12{space}" . password . "{space}-tsa{space}http://time.certum.pl{Enter}"
+						,"./ZXPSignCmd{space}-verify{space}_builds/" . original . buildnum . ".zxp{space}-certinfo{Enter}"]
+				,rootDir:A_AppData . "\Adobe\CEP\extensions\"
+				,file:["temp" . certCount . ".p12", original . buildnum . ".zip", original . buildnum . "zxp", original . buildnum . "zxp"]
+				,parentDir:["_certs\","_builds\", "_builds\", "_builds\"] }
+
+	if WinExist("ahk_exe mintty.exe") {
+		WinActivate, ahk_exe mintty.exe
+		SendInput % "cd " . convertSlashes(stages.rootDir) . "{Enter}"
+		Loop % stages.output.length() {
+			if (!only) {
+				Sleep, 50
+				SendInput % convertSlashes(stages.output[A_Index])
+				resultFile := stages.rootDir . stages.parentDir[A_Index] . stages.file[A_Index]
+				caller = 0
+				While !FileExist(resultFile) {
+					if (only)
+						break
+					if (caller > 70)
+						break
+					caller++
+					Sleep, 50
+				}
+				continue
+			} else {
+				break
+			}
+		only := true
+		SendInput % convertSlashes(stages.output[4])
+		}
+	}
+	Return original . buildnum . ".zxp"
+}
+
+; TestCopy:
+; 	FileCopyDir, % "C:\Users\TRSch\AppData\Roaming\Adobe\CEP\extensions\Vue-Inline-Template", % "C:\Users\TRSch\AppData\Roaming\Adobe\CEP\extensions\test"
+; 	MsgBox % "Done"
+; Return
+
+NewVueInline:
+	; CurrDirectory := A_AppData . "\Roaming\Adobe\CEP\extensions"
+	CurrDirectory := "C:\Users\TRSch\AppData\Roaming\Adobe\CEP\extensions"
+	RepoVar := ""
 	InputBox, RepoVar, New Vue CDN:,,,, 100
-		if ErrorLevel {
-			MsgBox, 16, Then no extension for you
-			Return
-		}
+	if ErrorLevel {
+		MsgBox, 16, Then no extension for you, Cancelling CEP template
+		Return
+	}
 	InputBox, DescVar, Description,,,, 100
-		if ErrorLevel {
-			MsgBox, 16, Then no extension for you
-			Return
-		}
+	if ErrorLevel {
+		MsgBox, 16, Then no extension for you, Cancelling CEP template
+		Return
+	}
 	name := RepoVar
 	ExtensionVar := Format("{:L}", StrReplace(RepoVar, A_Space, "."))
 	RepoVar :=  StrReplace(RepoVar, A_Space, "-")
+	; namelow := ExtensionVar
 	FileCopyDir, % CurrDirectory . "\Vue-Inline-Template", % CurrDirectory . "\" . RepoVar
 	newRepo := CurrDirectory . "\" . RepoVar
 
@@ -156,14 +278,16 @@ NewVueInline:
 	Loop, Files, %TotalFolders%, D
 		FolderCount++
 
-	DebugPort := FolderCount + 1980
+	DebugPort := FolderCount + 2040
 
-	files := ["\client\index.html", "\CSXS\manifest.xml", "\README.md", "\.debug"]
+	files := ["\client\index.html", "\client\main.js", "\CSXS\manifest.xml", "\README.md", "\.debug"]
 	vOutput := ""
 	Loop, % files.length() {
 		FileRead, temp, % newRepo . files[A_Index]
 		if (InStr(temp, "namehere"))
 			temp := RegExReplace(temp, "namehere", RepoVar)
+		if (InStr(temp, "namelow"))
+			temp := RegExReplace(temp, "namelow", ExtensionVar)
 		if (InStr(temp, "exthere"))
 			temp := RegExReplace(temp, "exthere", ExtensionVar)
 		if (InStr(temp, "deschere")) 
@@ -317,6 +441,9 @@ ReStrapTemplates:
 Gosub, RebootTemplates
 MsgBox % "Templates rebooted"
 Return
+
+
+
 
 
 ; ^!F23::
