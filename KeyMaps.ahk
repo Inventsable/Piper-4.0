@@ -1,3 +1,8 @@
+; 
+; 
+;  !!! NOT IN USE, use 4.1 single-file
+
+
 SetTitleMatchMode, 2
 SetDefaultMouseSpeed, 3
 global prevX, prevY, prevW, prevH
@@ -223,12 +228,12 @@ winSnap(direction) {
 	result := StrSplit(Clipboard, A_Space)
 	length := result[3]
 	root := result[2]
-	Send % "for (var " . root . " = 0; " . root . " < " . length . "; " . root
+	Send % "for (let " . root . " = 0; " . root . " < " . length . "; " . root
 	Send, +=+={)}{Space}{{}{Enter}
 	target := StrReplace(length, ".length", "[" . root . "];")
 	Send % "= " . target
 	Send, {Home}
-	Send % "var "
+	Send % "const "
 	Send, {Space}{Left}
 	KeyWait, Space
 	KeyWait, Space, D

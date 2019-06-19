@@ -12,11 +12,11 @@ global myDoc := "C:\Users\TRSch\OneDrive\Documents"
 
 ^#F17::	
     Gosub, KillAHKs
-    runScript("Piper 4.0", myDoc . "\Piper 4.0")
+    runScript("Piper-4.0", myDoc . "\Piper-4.0")
 Return
 
 ^#MButton::
-    runScript("Piper 4.0", myDoc . "\Piper 4.0")
+    runScript("Piper-4.0", myDoc . "\Piper-4.0")
 Return
 
 ^#F14::
@@ -25,7 +25,7 @@ Return
 
 
 ^#F13::
-    ; runScript("MiniSpy", myDoc . "\Piper 4.0\MiniSpy")
+    ; runScript("MiniSpy", myDoc . "\Piper-4.0\MiniSpy")
     runScript("WindowSpy", "C:\Program Files\AutoHotkey")
 Return
 
