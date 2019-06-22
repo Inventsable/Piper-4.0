@@ -248,6 +248,7 @@ winSnap(direction) {
 ~LWin::Send {Blind}{vk07}
 #F15 Up::Send, {LWinDown}{Up}{LWinUp}{Up Up}
 #F17 Up::Send, {LWinDown}{d}{LWinUp}{d Up}
+!+^Enter:: Send, {PrintScreen}
 
 #XButton1::winSnap("Right")
 #XButton2::winSnap("Left")
